@@ -68,7 +68,7 @@ function renderMediaTags(items, getUrlFn, isVerticalView) {
     if ([".jpg", ".jpeg", ".png"].includes(ext)) {
       return `<img class="media-thumb" data-index="${index}" src="${url}" style="${style}" onclick="openViewer(${index})" />`;
     } else {
-      return `<video controls src="${url}" style="${style}"></video>`;
+      return `<video class="media-thumb" data-index="${index}" src="${url}" style="${style}" onclick="openViewer(${index})"></video>`;
     }
   }).join('\n');
 }

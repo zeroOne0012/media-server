@@ -1,9 +1,7 @@
-// /viewer/viewer.js
-
 (function () {
   let currentIndex = -1;
   let mediaElements = [];
-  let overlay, img, prevBtn, nextBtn, thumbStrip;
+  let overlay, mediaContainer, prevBtn, nextBtn, thumbStrip;
 
   function createViewer() {
     overlay = document.createElement('div');
@@ -15,8 +13,8 @@
       if (e.target === overlay) closeViewer();
     });
 
-    img = document.createElement('img');
-    img.style = 'max-height: 90vh; object-fit: contain;';
+    mediaContainer = document.createElement('div');
+    mediaContainer.style = 'max-height: 90vh; display:flex; justify-content:center; align-items:center;';
 
     prevBtn = document.createElement('button');
     nextBtn = document.createElement('button');
@@ -36,7 +34,7 @@
 
     overlay.appendChild(prevBtn);
     overlay.appendChild(nextBtn);
-    overlay.appendChild(img);
+    overlay.appendChild(mediaContainer);
     overlay.appendChild(thumbStrip);
     document.body.appendChild(overlay);
 
@@ -46,6 +44,7 @@
       if (e.key === 'ArrowRight') navigate(1);
       if (e.key === 'Escape') closeViewer();
     });
+
     overlay.style.display = 'none';
   }
 
@@ -53,34 +52,71 @@
     if (!overlay) createViewer();
     mediaElements = [...document.querySelectorAll('.media-thumb')];
     currentIndex = index;
-    showImage(currentIndex);
+    showMedia(currentIndex);
     overlay.style.display = 'flex';
   }
 
   function closeViewer() {
     overlay.style.display = 'none';
+    mediaContainer.innerHTML = '';
   }
 
   function navigate(offset) {
     const len = mediaElements.length;
     currentIndex = (currentIndex + offset + len) % len;
-    showImage(currentIndex);
+    showMedia(currentIndex);
   }
 
-  function showImage(index) {
+  function showMedia(index) {
     const src = mediaElements[index].getAttribute('src');
-    img.setAttribute('src', src);
+    const type = mediaElements[index].tagName.toLowerCase();
 
+    mediaContainer.innerHTML = '';
+    let main;
+
+    if (type === 'video') {
+      main = document.createElement('video');
+      main.src = src;
+      main.controls = true;
+      main.autoplay = true;
+      main.playsInline = true;
+      main.style = 'max-height: 90vh; max-width: 100%;';
+      main.addEventListener('loadedmetadata', () => {
+        main.currentTime = 0;
+        main.play().catch(() => {});
+      });
+    } else {
+      main = document.createElement('img');
+      main.src = src;
+      main.style = 'max-height: 90vh; max-width: 100%; object-fit: contain;';
+    }
+
+    mediaContainer.appendChild(main);
+
+    // 하단 썸네일 리스트
     thumbStrip.innerHTML = '';
-    mediaElements.forEach((el, i) => {
-      const thumb = document.createElement('img');
-      thumb.src = el.src;
+    mediaElements.forEach((thumbEl, i) => {
+      const thumbType = thumbEl.tagName.toLowerCase();
+      const thumb = document.createElement(thumbType);
+      thumb.src = thumbEl.getAttribute('src');
       thumb.style = 'height: 60px; cursor: pointer; opacity:' + (i === index ? '1' : '0.5');
-      thumb.onclick = () => showImage(i);
+      thumb.onclick = () => showMedia(i);
+
+      if (thumbType === 'video') {
+        thumb.muted = true;
+        thumb.playsInline = true;
+        thumb.autoplay = true;
+        thumb.loop = true;
+        thumb.preload = 'metadata';
+        thumb.addEventListener('loadeddata', () => {
+          thumb.currentTime = 0;
+          thumb.pause(); // 🔴 재생 중지 (썸네일처럼)
+        });
+      }
+
       thumbStrip.appendChild(thumb);
     });
   }
 
-  // expose globally
   window.openViewer = openViewer;
 })();
