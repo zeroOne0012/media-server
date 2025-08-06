@@ -52,6 +52,32 @@
     if (!overlay) createViewer();
     mediaElements = [...document.querySelectorAll('.media-thumb')];
     currentIndex = index;
+
+    // 썸네일이 없으면 처음만 한 번 생성
+    if (thumbStrip.children.length === 0) {
+      mediaElements.forEach((thumbEl, i) => {
+        const thumbType = thumbEl.tagName.toLowerCase();
+        const thumb = document.createElement(thumbType);
+        thumb.src = thumbEl.getAttribute('src');
+        thumb.dataset.index = i;
+        thumb.classList.add('thumb-item');
+        thumb.style = 'height: 60px; cursor: pointer; opacity: 0.5;';
+        thumb.onclick = () => showMedia(i);
+
+        if (thumbType === 'video') {
+          thumb.muted = true;
+          thumb.playsInline = true;
+          thumb.preload = 'metadata';
+          thumb.addEventListener('loadeddata', () => {
+            thumb.currentTime = 0;
+            thumb.pause();
+          });
+        }
+
+        thumbStrip.appendChild(thumb);
+      });
+    }
+
     showMedia(currentIndex);
     overlay.style.display = 'flex';
   }
@@ -93,28 +119,10 @@
 
     mediaContainer.appendChild(main);
 
-    // 하단 썸네일 리스트
-    thumbStrip.innerHTML = '';
-    mediaElements.forEach((thumbEl, i) => {
-      const thumbType = thumbEl.tagName.toLowerCase();
-      const thumb = document.createElement(thumbType);
-      thumb.src = thumbEl.getAttribute('src');
-      thumb.style = 'height: 60px; cursor: pointer; opacity:' + (i === index ? '1' : '0.5');
-      thumb.onclick = () => showMedia(i);
-
-      if (thumbType === 'video') {
-        thumb.muted = true;
-        thumb.playsInline = true;
-        thumb.autoplay = true;
-        thumb.loop = true;
-        thumb.preload = 'metadata';
-        thumb.addEventListener('loadeddata', () => {
-          thumb.currentTime = 0;
-          thumb.pause(); // 🔴 재생 중지 (썸네일처럼)
-        });
-      }
-
-      thumbStrip.appendChild(thumb);
+    // 선택 표시 갱신
+    const thumbs = thumbStrip.querySelectorAll('.thumb-item');
+    thumbs.forEach((thumb, i) => {
+      thumb.style.opacity = (i === index) ? '1' : '0.5';
     });
   }
 
