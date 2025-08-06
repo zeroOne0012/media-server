@@ -48,10 +48,10 @@ function createSmartPagination(currentPage, totalPages, baseUrl) {
 
   return `<div class="pagination">${buttons.join('')}</div>`;
 }
-
 function renderMediaTags(items, getUrlFn) {
   return items.map(entry => {
-    const ext = path.extname(entry).toLowerCase();
+    const name = typeof entry === 'string' ? entry : entry.entryName;
+    const ext = path.extname(name).toLowerCase();
     const url = getUrlFn(entry);
     if ([".jpg", ".jpeg", ".png"].includes(ext)) {
       return `<img src="${url}" style="width: 100%; margin-bottom: 20px;" />`;
@@ -60,6 +60,7 @@ function renderMediaTags(items, getUrlFn) {
     }
   }).join('\n');
 }
+
 
 app.get('/', (req, res) => {
   const links = Object.entries(ROOT_DIRS).map(([name]) => {
@@ -147,8 +148,7 @@ app.get('/browse', (req, res) => {
       }
     </style></head>
     <body style="padding:20px;font-family:sans-serif;">
-      <h2>📂 /${rootKey}/${relDir}</h2>
-      ${backLink} | <a href="javascript:history.back()">🔙 이전 화면</a>
+      $1${backLink} | <a href="javascript:history.back()">🔙 이전으로</a>
       <hr/>
       ${folderLinks.join('\n')}
       ${zipLinks.join('\n')}
@@ -201,8 +201,7 @@ app.get('/zip', (req, res) => {
       }
     </style></head>
     <body style="padding:20px;font-family:sans-serif;">
-      <h2>🗜️ ZIP 보기: ${zipRelPath}</h2>
-      <a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.dirname(zipRelPath))}">⬅️ 돌아가기</a> | <a href="javascript:history.back()">🔙 이전 화면</a>
+      $1<a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.dirname(zipRelPath))}">⬅️ 상위 폴더</a> | 
       ${paginationHTML}
       ${mediaTags}
       ${paginationHTML}
