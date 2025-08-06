@@ -121,9 +121,30 @@
 
   function navigate(offset) {
     const len = mediaElements.length;
-    currentIndex = (currentIndex + offset + len) % len;
+    const nextIndex = currentIndex + offset;
+
+    if (nextIndex >= len) {
+      const nextPage = getNextPageUrl();
+      if (nextPage) {
+        localStorage.setItem('openViewerOnLoad', '0');
+        location.href = nextPage;
+      }
+      return;
+    }
+
+    if (nextIndex < 0) {
+      const prevPage = getPrevPageUrl();
+      if (prevPage) {
+        localStorage.setItem('openViewerOnLoad', '19'); // 마지막 항목
+        location.href = prevPage;
+      }
+      return;
+    }
+
+    currentIndex = (nextIndex + len) % len;
     showMedia(currentIndex);
   }
+
 
   function showMedia(index) {
     const src = mediaElements[index].getAttribute('src');
@@ -159,4 +180,35 @@
   }
 
   window.openViewer = openViewer;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const indexToOpen = localStorage.getItem('openViewerOnLoad');
+    if (indexToOpen !== null) {
+      localStorage.removeItem('openViewerOnLoad');
+      const thumbs = [...document.querySelectorAll('.media-thumb')];
+      const i = parseInt(indexToOpen);
+      if (thumbs[i]) {
+        openViewer(i);
+      }
+    }
+  });
+
+
+  function getNextPageUrl() {
+    const url = new URL(location.href);
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    url.searchParams.set('page', page + 1);
+    return url.toString();
+  }
+
+  function getPrevPageUrl() {
+    const url = new URL(location.href);
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    if (page <= 1) return null;
+    url.searchParams.set('page', page - 1);
+    return url.toString();
+  }
+
+
+
 })();
