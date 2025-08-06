@@ -56,7 +56,7 @@ function createSmartPagination(currentPage, totalPages, baseUrl) {
   return `<div class="pagination">${buttons.join('')}</div>`;
 }
 
-function renderMediaTags(items, getUrlFn, isVerticalView) {
+function renderMediaTags(items, getUrlFn, isVerticalView, dirPath) {
   return items.map((entry, index) => {
     const name = typeof entry === 'string' ? entry : entry.entryName;
     const ext = path.extname(name).toLowerCase();
@@ -66,9 +66,9 @@ function renderMediaTags(items, getUrlFn, isVerticalView) {
       : 'width: 100%; margin-bottom: 20px;';
 
     if ([".jpg", ".jpeg", ".png"].includes(ext)) {
-      return `<img class="media-thumb" data-index="${index}" src="${url}" style="${style}" onclick="openViewer(${index})" />`;
+      return `<img class="media-thumb" data-index="${index}" data-path="${dirPath}" src="${url}" style="${style}" onclick="openViewer(${index})" />`;
     } else {
-      return `<video class="media-thumb" data-index="${index}" src="${url}" style="${style}" onclick="openViewer(${index})"></video>`;
+      return `<video class="media-thumb" data-index="${index}" data-path="${dirPath}" src="${url}" style="${style}" onclick="openViewer(${index})"></video>`;
     }
   }).join('\n');
 }
@@ -148,7 +148,19 @@ app.get('/browse', (req, res) => {
 
   const toggle = renderToggleScript(baseUrl + `&page=${page}`, isVerticalView);
   const paginationHTML = createSmartPagination(page, totalPages, baseUrl + `&vertical=${isVerticalView}`);
-  const mediaTags = renderMediaTags(currentItems, f => path.join(relDir, f).replace(/\\/g, '/'), isVerticalView);
+  const allMediaList = mediaFiles.map(f => path.join(relDir, f).replace(/\\/g, '/'));
+
+
+  const viewerScript = `
+    <script>
+      window.__ALL_MEDIA_LIST__ = ${JSON.stringify(allMediaList)};
+      window.__MEDIA_PATH_KEY__ = ${JSON.stringify(relDir)};
+    </script>
+    <script src="/viewer/viewer.js"></script>
+  `;
+
+  const mediaTags = renderMediaTags(currentItems, f => path.join(relDir, f).replace(/\\/g, '/'), isVerticalView, relDir);
+
 
   const subHtml = subdirs.map(sub => `<div><a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.join(relDir, sub))}">📁 ${sub}</a></div>`).join('');
   const zipHtml = zipFiles.map(zip => `<div><a href="/zip?root=${rootKey}&file=${encodeURIComponent(path.join(relDir, zip))}">🗜️ ${zip}</a></div>`).join('');
@@ -162,7 +174,7 @@ app.get('/browse', (req, res) => {
     ${backLink}<br><span>📁 현재 위치: /${relDir}</span><hr/>
     ${toggle}
     ${subHtml}${zipHtml}${paginationHTML}${mediaTags}${paginationHTML}
-    <script src="/viewer/viewer.js"></script>
+    ${viewerScript}
   `));
 });
 
@@ -187,7 +199,11 @@ app.get('/zip', (req, res) => {
   const baseUrl = `/zip?root=${rootKey}&file=${encodeURIComponent(zipRelPath)}`;
   const toggle = renderToggleScript(baseUrl + `&page=${page}`, isVerticalView);
   const paginationHTML = createSmartPagination(page, totalPages, baseUrl + `&vertical=${isVerticalView}`);
-  const mediaTags = renderMediaTags(currentPageItems, entry => `/zip/view?root=${rootKey}&file=${encodeURIComponent(zipRelPath)}&entry=${encodeURIComponent(entry.entryName)}`, isVerticalView);
+  const mediaTags = renderMediaTags(
+    currentPageItems, 
+    entry => `/zip/view?root=${rootKey}&file=${encodeURIComponent(zipRelPath)}&entry=${encodeURIComponent(entry.entryName)}`, 
+    isVerticalView,
+    zipRelPath);
 
   res.send(wrapHtml(`
     <a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.dirname(zipRelPath))}">⬅️ 상위 폴더</a><br><span>📁현재 ZIP: /${zipRelPath}</span><hr/>
