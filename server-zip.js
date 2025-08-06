@@ -6,9 +6,15 @@ const AdmZip = require('adm-zip');
 const app = express();
 const PORT = 9999;
 
-const ROOT_DIRS = {
-  a: path.resolve('D:\\DEL bin'),
-};
+// const ROOT_DIRS = {
+//   a: path.resolve('D:\\DEL bin'),
+// };
+const ROOT_DIRS = {};
+const paths = fs.readFileSync('path.txt', 'utf-8').split('\n').map(p => p.trim()).filter(Boolean);
+paths.forEach(p => {
+  ROOT_DIRS[`path_${p}`] = path.resolve(p);
+});
+
 
 const ITEMS_PER_PAGE = 20;
 
@@ -48,6 +54,7 @@ function createSmartPagination(currentPage, totalPages, baseUrl) {
 
   return `<div class="pagination">${buttons.join('')}</div>`;
 }
+
 function renderMediaTags(items, getUrlFn) {
   return items.map(entry => {
     const name = typeof entry === 'string' ? entry : entry.entryName;
@@ -60,7 +67,6 @@ function renderMediaTags(items, getUrlFn) {
     }
   }).join('\n');
 }
-
 
 app.get('/', (req, res) => {
   const links = Object.entries(ROOT_DIRS).map(([name]) => {
@@ -130,11 +136,12 @@ app.get('/browse', (req, res) => {
 
   const baseUrl = `/browse?root=${rootKey}&dir=${encodeURIComponent(relDir)}`;
   const paginationHTML = createSmartPagination(page, totalPages, baseUrl);
-
   const mediaTags = renderMediaTags(currentItems, f => path.join(relDir, f).replace(/\\/g, '/'));
 
   const parent = relDir ? path.dirname(relDir).replace(/\\/g, '/') : null;
-  const backLink = parent && parent !== '.' ? `<a href="/browse?root=${rootKey}&dir=${encodeURIComponent(parent)}">⬅️ 상위 폴더</a>` : `<a href="/">⬅️ 루트 선택</a>`;
+  const backLink = relDir
+    ? `<a href="/browse?root=${rootKey}&dir=${encodeURIComponent(parent)}">⬅️ 상위 폴더</a>`
+    : `<a href="/">⬅️ 루트 선택</a>`;
 
   res.send(`
     <html><head><style>
@@ -148,7 +155,7 @@ app.get('/browse', (req, res) => {
       }
     </style></head>
     <body style="padding:20px;font-family:sans-serif;">
-      $1${backLink} | <a href="javascript:history.back()">🔙 이전으로</a>
+      ${backLink} <br> <span style="color:#000">📁 현재 위치: /${relDir}</span>
       <hr/>
       ${folderLinks.join('\n')}
       ${zipLinks.join('\n')}
@@ -201,7 +208,8 @@ app.get('/zip', (req, res) => {
       }
     </style></head>
     <body style="padding:20px;font-family:sans-serif;">
-      $1<a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.dirname(zipRelPath))}">⬅️ 상위 폴더</a> | 
+      <a href="/browse?root=${rootKey}&dir=${encodeURIComponent(path.dirname(zipRelPath))}">⬅️ 상위 폴더</a> <br> <span style="color:#000">📁현재 ZIP: /${zipRelPath}</span>
+      <hr/>
       ${paginationHTML}
       ${mediaTags}
       ${paginationHTML}
