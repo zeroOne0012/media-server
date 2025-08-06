@@ -6,22 +6,42 @@
   function createViewer() {
     overlay = document.createElement('div');
     overlay.style = `
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
     `;
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeViewer();
     });
 
     mediaContainer = document.createElement('div');
-    mediaContainer.style = 'max-height: 90vh; display:flex; justify-content:center; align-items:center;';
+    mediaContainer.style = `
+      max-height: 90vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-bottom: 80px; /* 하단 썸네일 strip 가리지 않도록 */
+    `;
 
     prevBtn = document.createElement('button');
     nextBtn = document.createElement('button');
     prevBtn.textContent = '<';
     nextBtn.textContent = '>';
     [prevBtn, nextBtn].forEach(btn => {
-      btn.style = 'position: absolute; top: 50%; font-size: 30px; background: #fff; border: none; cursor: pointer; padding: 10px;';
+      btn.style = `
+        position: absolute;
+        top: 50%;
+        font-size: 30px;
+        background: #fff;
+        border: none;
+        cursor: pointer;
+        padding: 10px;
+      `;
     });
     prevBtn.style.left = '20px';
     nextBtn.style.right = '20px';
@@ -30,7 +50,20 @@
     nextBtn.onclick = () => navigate(1);
 
     thumbStrip = document.createElement('div');
-    thumbStrip.style = 'display: flex; overflow-x: auto; gap: 5px; padding: 10px; background: #222; margin-top: 10px;';
+    thumbStrip.style = `
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center; /* 하단의 미디어 리스트 가운데 정렬 */
+      overflow-x: auto;
+      gap: 5px;
+      padding: 10px;
+      background: #222;
+      z-index: 10000;
+    `;
+
 
     overlay.appendChild(prevBtn);
     overlay.appendChild(nextBtn);
@@ -53,7 +86,6 @@
     mediaElements = [...document.querySelectorAll('.media-thumb')];
     currentIndex = index;
 
-    // 썸네일이 없으면 처음만 한 번 생성
     if (thumbStrip.children.length === 0) {
       mediaElements.forEach((thumbEl, i) => {
         const thumbType = thumbEl.tagName.toLowerCase();
@@ -70,7 +102,7 @@
           thumb.preload = 'metadata';
           thumb.addEventListener('loadeddata', () => {
             thumb.currentTime = 0;
-            thumb.pause();
+            thumb.pause(); // 재생하지 않고 첫 프레임만 보여줌
           });
         }
 
@@ -119,7 +151,7 @@
 
     mediaContainer.appendChild(main);
 
-    // 선택 표시 갱신
+    // 현재 썸네일 opacity 갱신
     const thumbs = thumbStrip.querySelectorAll('.thumb-item');
     thumbs.forEach((thumb, i) => {
       thumb.style.opacity = (i === index) ? '1' : '0.5';
