@@ -1,162 +1,152 @@
 (function () {
-  let currentIndex = -1;
-  let mediaElements = [];
-  let overlay, mediaContainer, prevBtn, nextBtn, thumbStrip;
+  let slides = [];
+  let order = [];
+  let index = 0;
+  let timer = null;
+  let delay = 3000;
+  let paused = false;
 
-  function createViewer() {
+  let overlay, img;
+  let preloadIndex = 0;
+  const PRELOAD_BATCH = 10;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function preloadNextBatch() {
+    const end = Math.min(preloadIndex + PRELOAD_BATCH, order.length);
+    for (; preloadIndex < end; preloadIndex++) {
+      const i = order[preloadIndex];
+      const img = new Image();
+      img.src = slides[i].src;
+    }
+  }
+
+  function createOverlay() {
     overlay = document.createElement('div');
     overlay.style = `
       position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
+      inset: 0;
+      background: black;
       z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-    `;
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeViewer();
-    });
-
-    mediaContainer = document.createElement('div');
-    mediaContainer.style = `
-      max-height: 90vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding-bottom: 80px; /* 하단 썸네일 strip 가리지 않도록 */
     `;
 
-    prevBtn = document.createElement('button');
-    nextBtn = document.createElement('button');
-    prevBtn.textContent = '<';
-    nextBtn.textContent = '>';
-    [prevBtn, nextBtn].forEach(btn => {
-      btn.style = `
-        position: absolute;
-        top: 50%;
-        font-size: 30px;
-        background: #fff;
-        border: none;
-        cursor: pointer;
-        padding: 10px;
-      `;
+    img = document.createElement('img');
+    img.style = `
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    `;
+
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+
+    // 클릭 영역
+    overlay.addEventListener('click', e => {
+      const x = e.clientX;
+      const w = window.innerWidth;
+
+      if (x < w * 0.33) prev();
+      else if (x > w * 0.66) next();
+      else togglePause();
     });
-    prevBtn.style.left = '20px';
-    nextBtn.style.right = '20px';
 
-    prevBtn.onclick = () => navigate(-1);
-    nextBtn.onclick = () => navigate(1);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') stop();
+      if (e.key === 'ArrowLeft') prev();
+      if (e.key === 'ArrowRight') next();
+      if (e.key === ' ') togglePause();
+    });
 
-    thumbStrip = document.createElement('div');
-    thumbStrip.style = `
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
+    createControls();
+  }
+
+  function createControls() {
+    const box = document.createElement('div');
+    box.style = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      justify-content: center; /* 하단의 미디어 리스트 가운데 정렬 */
-      overflow-x: auto;
-      gap: 5px;
-      padding: 10px;
-      background: #222;
+      gap: 10px;
       z-index: 10000;
     `;
 
-
-    overlay.appendChild(prevBtn);
-    overlay.appendChild(nextBtn);
-    overlay.appendChild(mediaContainer);
-    overlay.appendChild(thumbStrip);
-    document.body.appendChild(overlay);
-
-    document.addEventListener('keydown', (e) => {
-      if (overlay.style.display === 'none') return;
-      if (e.key === 'ArrowLeft') navigate(-1);
-      if (e.key === 'ArrowRight') navigate(1);
-      if (e.key === 'Escape') closeViewer();
+    [1, 2, 3].forEach(sec => {
+      const btn = document.createElement('button');
+      btn.textContent = sec + 's';
+      btn.style = 'font-size:16px;padding:6px 10px;';
+      btn.onclick = () => changeDelay(sec * 1000);
+      box.appendChild(btn);
     });
 
-    overlay.style.display = 'none';
+    document.body.appendChild(box);
   }
 
-  function openViewer(index) {
-    if (!overlay) createViewer();
-    mediaElements = [...document.querySelectorAll('.media-thumb')];
-    currentIndex = index;
+  function show() {
+    img.src = slides[order[index]].src;
 
-    if (thumbStrip.children.length === 0) {
-      mediaElements.forEach((thumbEl, i) => {
-        const thumbType = thumbEl.tagName.toLowerCase();
-        const thumb = document.createElement(thumbType);
-        thumb.src = thumbEl.getAttribute('src');
-        thumb.dataset.index = i;
-        thumb.classList.add('thumb-item');
-        thumb.style = 'height: 60px; cursor: pointer; opacity: 0.5;';
-        thumb.onclick = () => showMedia(i);
-
-        if (thumbType === 'video') {
-          thumb.muted = true;
-          thumb.playsInline = true;
-          thumb.preload = 'metadata';
-          thumb.addEventListener('loadeddata', () => {
-            thumb.currentTime = 0;
-            thumb.pause(); // 재생하지 않고 첫 프레임만 보여줌
-          });
-        }
-
-        thumbStrip.appendChild(thumb);
-      });
+    // 프리로드 트리거
+    if (index + PRELOAD_BATCH > preloadIndex) {
+      preloadNextBatch();
     }
-
-    showMedia(currentIndex);
-    overlay.style.display = 'flex';
   }
 
-  function closeViewer() {
-    overlay.style.display = 'none';
-    mediaContainer.innerHTML = '';
+  function next() {
+    index = (index + 1) % order.length;
+    show();
   }
 
-  function navigate(offset) {
-    const len = mediaElements.length;
-    currentIndex = (currentIndex + offset + len) % len;
-    showMedia(currentIndex);
+  function prev() {
+    index = (index - 1 + order.length) % order.length;
+    show();
   }
 
-  function showMedia(index) {
-    const src = mediaElements[index].getAttribute('src');
-    const type = mediaElements[index].tagName.toLowerCase();
-
-    mediaContainer.innerHTML = '';
-    let main;
-
-    if (type === 'video') {
-      main = document.createElement('video');
-      main.src = src;
-      main.controls = true;
-      main.autoplay = true;
-      main.playsInline = true;
-      main.style = 'max-height: 90vh; max-width: 100%;';
-      main.addEventListener('loadedmetadata', () => {
-        main.currentTime = 0;
-        main.play().catch(() => {});
-      });
-    } else {
-      main = document.createElement('img');
-      main.src = src;
-      main.style = 'max-height: 90vh; max-width: 100%; object-fit: contain;';
-    }
-
-    mediaContainer.appendChild(main);
-
-    // 현재 썸네일 opacity 갱신
-    const thumbs = thumbStrip.querySelectorAll('.thumb-item');
-    thumbs.forEach((thumb, i) => {
-      thumb.style.opacity = (i === index) ? '1' : '0.5';
-    });
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(next, delay);
   }
 
-  window.openViewer = openViewer;
+  function togglePause() {
+    paused = !paused;
+    if (paused) clearInterval(timer);
+    else startTimer();
+  }
+
+  function changeDelay(ms) {
+    delay = ms;
+    if (!paused) startTimer();
+  }
+
+  function startSlideshow() {
+    slides = Array.from(document.querySelectorAll('img.media-slide'));
+    if (!slides.length) return alert('이미지가 없습니다');
+
+    order = slides.map((_, i) => i);
+    shuffle(order);
+
+    index = 0;
+    preloadIndex = 0;
+
+    createOverlay();
+    preloadNextBatch();
+    show();
+    startTimer();
+  }
+
+  function stop() {
+    clearInterval(timer);
+    overlay.remove();
+  }
+
+  // 전역 노출
+  window.startSlideshow = startSlideshow;
 })();
