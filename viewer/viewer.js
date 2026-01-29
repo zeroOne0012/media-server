@@ -17,14 +17,18 @@
     }
   }
 
-  function preloadNextBatch() {
-    const end = Math.min(preloadIndex + PRELOAD_BATCH, order.length);
-    for (; preloadIndex < end; preloadIndex++) {
-      const i = order[preloadIndex];
-      const img = new Image();
-      img.src = slides[i].src;
+function preloadNextBatch() {
+  const end = Math.min(preloadIndex + PRELOAD_BATCH, order.length);
+  for (; preloadIndex < end; preloadIndex++) {
+    const slide = slides[order[preloadIndex]];
+    if (!slide.src) {
+      const tmp = new Image();
+      tmp.src = slide.dataset.src;
+      slide.src = tmp.src;
     }
   }
+}
+
 
   function createOverlay() {
     overlay = document.createElement('div');
@@ -90,15 +94,17 @@
 
     document.body.appendChild(box);
   }
-
-  function show() {
-    img.src = slides[order[index]].src;
-
-    // 프리로드 트리거
-    if (index + PRELOAD_BATCH > preloadIndex) {
-      preloadNextBatch();
-    }
+function show() {
+  const slide = slides[order[index]];
+  if (!slide.src) {
+    slide.src = slide.dataset.src;
   }
+  img.src = slide.src;
+
+  if (index + PRELOAD_BATCH > preloadIndex) {
+    preloadNextBatch();
+  }
+}
 
   function next() {
     index = (index + 1) % order.length;

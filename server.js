@@ -1,5 +1,4 @@
-// 아래 코드는 사용자의 요구사항을 모두 반영한 media server 전체 구현 코드입니다.
-
+// renderMediaTags() 변경 -> 쇼만 제대로 동작
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -66,8 +65,16 @@ function renderMediaTags(items, getUrlFn, isVerticalView) {
       : 'width: 100%; margin-bottom: 20px;';
 
     if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+      return `<img class="media-slide"
+            data-src="${url}"
+            style="${style}" />`;
+    } 
+    /*
+    if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
       return `<img class="media-slide" src="${url}" style="${style}" />`;
-    } else {
+    } 
+    */
+    else {
       return `<video controls src="${url}" style="${style}"></video>`;
     }
   }).join('\n');
