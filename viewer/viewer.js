@@ -43,11 +43,12 @@ function preloadNextBatch() {
     `;
 
     img = document.createElement('img');
-    img.style = `
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-    `;
+img.style = `
+  height: 100vh;
+  max-width: 100vw;
+  aspect-ratio: 3 / 5;
+  object-fit: contain;
+`;
 
     overlay.appendChild(img);
     document.body.appendChild(overlay);
